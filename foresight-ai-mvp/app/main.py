@@ -1,5 +1,4 @@
 from fastapi import FastAPI
-# from services.telecom_engine import analyze_kpi
 from app.routes import router
 from services.services.telecom_engine import analyze_kpi
 
