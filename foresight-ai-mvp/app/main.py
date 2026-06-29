@@ -1,7 +1,6 @@
 from fastapi import FastAPI
 from app.routes import router
-from services.services.telecom_engine import analyze_kpi
-
+from services.telecom_engine import analyze_node
 from mock.fake_foresight import get_fake_kpi
 
 app = FastAPI(
