@@ -1,5 +1,7 @@
 from fastapi import FastAPI
-from services.engineering_engine import analyze_kpi
+# from services.telecom_engine import analyze_kpi
+from services.services.telecom_engine import analyze_kpi
+
 from mock.fake_foresight import get_fake_kpi
 
 app = FastAPI(
@@ -8,6 +10,13 @@ app = FastAPI(
     version="0.1.0"
 )
 
+@app.get("/")
+def root():
+    return {
+        "message": "Foresight AI MVP is running",
+        "docs": "/docs",
+        "health": "/health"
+    }
 # -----------------------------
 # Health Check
 # -----------------------------
