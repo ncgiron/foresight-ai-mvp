@@ -1,25 +1,36 @@
-def analyze_kpi(kpi: dict):
+def analyze_node(kpi: dict):
 
-    cpu = kpi.get("cpu", 0)
-    memory = kpi.get("memory", 0)
-    sessions = kpi.get("active_sessions", 0)
+    cpu = kpi["cpu"]
+    memory = kpi["memory"]
+    sessions = kpi["active_sessions"]
+    packet_loss = kpi["packet_loss"]
 
-    risk = "LOW"
     score = 100
+    risk = "LOW"
 
+    # CPU stress model
     if cpu > 85:
+        score -= 25
         risk = "HIGH"
-        score -= 30
 
+    # Memory pressure
     if memory > 85:
-        risk = "HIGH"
         score -= 20
+        risk = "HIGH"
 
-    if sessions > 4500000:
-        risk = "MEDIUM"
+    # Session overload (telecom realistic threshold)
+    if sessions > 5000000:
         score -= 15
+        if risk != "HIGH":
+            risk = "MEDIUM"
+
+    # Packet loss is critical in telecom
+    if packet_loss > 0.2:
+        score -= 30
+        risk = "HIGH"
 
     return {
+        "node": kpi["node"],
         "health_score": max(score, 0),
         "risk_level": risk,
         "recommendation": generate_recommendation(risk, score)
@@ -29,9 +40,9 @@ def analyze_kpi(kpi: dict):
 def generate_recommendation(risk, score):
 
     if risk == "HIGH":
-        return "Immediate investigation required. Scale resources or redistribute traffic."
+        return "CRITICAL: immediate traffic reroute or scaling required."
 
     if score < 70:
-        return "Monitor closely. Potential capacity degradation."
+        return "WARNING: investigate capacity and session load."
 
-    return "System operating within normal parameters."
+    return "OK: system stable within expected thresholds."

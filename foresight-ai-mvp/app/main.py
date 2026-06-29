@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 # from services.telecom_engine import analyze_kpi
+from app.routes import router
 from services.services.telecom_engine import analyze_kpi
 
 from mock.fake_foresight import get_fake_kpi
@@ -9,6 +10,8 @@ app = FastAPI(
     description="Telecom KPI Analytics Prototype using Fake Foresight Data",
     version="0.1.0"
 )
+
+app.include_router(router)
 
 @app.get("/")
 def root():
