@@ -2,6 +2,10 @@ from fastapi import FastAPI
 from app.routes import router
 from services.telecom_engine import analyze_node
 from mock.fake_foresight import get_fake_kpi
+from services.history_store import HISTORY
+from services.anomaly_engine import detect_anomaly
+
+
 
 app = FastAPI(
     title="Foresight AI MVP",
@@ -50,7 +54,7 @@ def smf_analysis():
     Fake KPI → Engineering Engine → Result
     """
     kpi = get_fake_kpi()
-    analysis = analyze_kpi(kpi)
+    analysis = analyze_node(kpi)
 
     return {
         "node": kpi["node"],
