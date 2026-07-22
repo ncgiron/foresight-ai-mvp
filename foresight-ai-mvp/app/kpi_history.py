@@ -1,5 +1,3 @@
-from pydantic import BaseModel
-from typing import Dict, List
 from sqlalchemy import Column
 from sqlalchemy import Integer
 from sqlalchemy import Float
@@ -8,20 +6,6 @@ from sqlalchemy import DateTime
 
 from app.core.database import Base
 
-
-
-class NodeKPI(BaseModel):
-    node: str
-    cpu_usage: float
-    memory_usage: float
-    throughput_mbps: float
-    sessions: int
-    latency_ms: float
-
-
-class NetworkState(BaseModel):
-    timestamp: str
-    nodes: Dict[str, NodeKPI]
 
 class KPIHistory(Base):
     __tablename__ = "kpi_history"
@@ -43,4 +27,4 @@ class KPIHistory(Base):
 
     packet_loss = Column(Float)
 
-    availability = Column(Float)    
+    availability = Column(Float)

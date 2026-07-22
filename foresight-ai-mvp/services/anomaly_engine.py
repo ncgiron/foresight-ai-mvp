@@ -9,6 +9,8 @@ def compute_zscore(values, current):
 
     if std == 0:
         return 0
+    #### temporary fix for UPF CPU anomaly detection
+    
 
     return (current - mean) / std
 
@@ -31,10 +33,37 @@ def detect_anomaly(kpi_history, current_kpi):
         else:
             risk = "LOW"
 
+        # result[metric] = {
+        #     "value": value,
+        #     "z_score": z,
+        #     "risk": risk
+        # }
+        
         result[metric] = {
-            "value": value,
-            "z_score": z,
-            "risk": risk
+
+        "value": round(value, 2),
+
+        "z_score": round(z, 2),
+
+        "direction":
+            "HIGH" if z > 0 else "LOW",
+
+        "risk": risk
         }
 
     return result
+
+def summarize_node_anomalies(result):
+
+    highest = "LOW"
+
+    for metric in result.values():
+
+        if metric["risk"] == "HIGH":
+            highest = "HIGH"
+            break
+
+        elif metric["risk"] == "MEDIUM":
+            highest = "MEDIUM"
+
+    return highest
