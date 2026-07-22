@@ -274,8 +274,8 @@ def ask_copilot(
 
         question,
 
-        # foresight
-        {"status": "ok"}
+        foresight
+        # {"status": "ok"}
     )
 
     return {
