@@ -17,77 +17,104 @@ from fastapi import Body
 from services.copilot_engine import (ask_llm)
 from services.foresight_engine import ( build_foresight_context)
 
+from services.scenario_store import (set_current_scenario, get_current_scenario)
+from mock.kpi_generator import (generate_timeseries, generate_snapshot)
+from services.scenario_store import get_scenario_data
 
-
-
-from mock.kpi_generator import (
-    generate_timeseries,
-    generate_snapshot
-)
 
 router = APIRouter()
+#debugging temporary print statements
 
+print(
+    "SCENARIO OBJECT ID:",
+    id(get_current_scenario)
+)
+
+print(
+    "CURRENT SCENARIO:",
+    get_current_scenario()
+)
+#=========================
 def build_anomalies():
 
     current = generate_snapshot()
-
-    current = apply_scenario(
-        current,
-        "upf_congestion"
-    )
+    # current = apply_scenario(current, "upf_congestion")
 
     historical = generate_timeseries(72)
 
     anomalies = {}
 
     for node_name, node_data in current["nodes"].items():
-
         history = {
-
             "cpu_usage": [
                 sample["cpu_usage"]
                 for sample in historical["timeseries"][node_name]
             ],
-
             "latency_ms": [
                 sample["latency_ms"]
                 for sample in historical["timeseries"][node_name]
             ],
-
             "sessions": [
                 sample["sessions"]
                 for sample in historical["timeseries"][node_name]
             ],
-
             "memory_usage": [
                 sample["memory_usage"]
                 for sample in historical["timeseries"][node_name]
             ],
-
             "throughput_mbps": [
                 sample["throughput_mbps"]
                 for sample in historical["timeseries"][node_name]
             ]
         }
 
+                
         current_kpi = {
 
             "cpu_usage": node_data["cpu_usage"],
-
             "latency_ms": node_data["latency_ms"],
-
             "sessions": node_data["sessions"],
-
             "memory_usage": node_data["memory_usage"],
-
             "throughput_mbps": node_data["throughput_mbps"]
         }
+
+        # Apply selected scenario BEFORE anomaly detection
+        scenario = get_scenario_data()
+        print("CURRENT SCENARIO:", get_current_scenario())
+        print("NODE NAME:", node_name)
+        print("SCENARIO:", scenario)
+        print("NODE IN SCENARIO?", node_name in scenario)
+
+        if node_name in scenario:
+
+            for metric, value in scenario[node_name].items():
+
+                current_kpi[metric] = value
+        
+        print("NODE:", node_name)
+        print("CURRENT KPI:", current_kpi)
 
         anomalies[node_name] = detect_anomaly(
             history,
             current_kpi
         )
+        
+        print("ANOMALIES:", anomalies)
 
+    
+# # Apply selected scenario overrides
+#         scenario = get_scenario_data()
+        
+#         print("ACTIVE SCENARIO:", get_current_scenario())
+#         print("SCENARIO DATA:", scenario)
+
+#     for nf, metrics in scenario.items():
+#         if nf not in anomalies:
+#             continue
+#         for metric, value in metrics.items():
+#             if metric in anomalies[nf]:
+#                 anomalies[nf][metric]["value"] = value
+                
     return anomalies
 
 
@@ -253,23 +280,23 @@ def get_foresight():
 
 
 @router.post("/copilot/ask")
-def ask_copilot(
-    payload: dict = Body(...)
-):
-
+def ask_copilot( payload: dict = Body(...)):
+    
+    print("ACTIVE SCENARIO IN COPILOT:", get_current_scenario())
     question = payload["question"]
-
     anomalies = build_anomalies()
-
     historical = generate_timeseries(72)
-
     foresight = build_foresight_context(
 
         anomalies,
 
         historical["timeseries"]
     )
-
+    print("=" * 80)
+    print("FORESIGHT STATUS:", foresight.get("network_status"))
+    print("ROOT CAUSE:", foresight.get("root_cause"))
+    print("=" * 80)
+    
     answer = ask_llm(
 
         question,
@@ -285,4 +312,46 @@ def ask_copilot(
 
         "answer":
             answer
+    }
+
+# @router.post("/scenario/set")
+# def set_scenario(payload: dict):
+
+#     scenario = payload["scenario"]
+
+#     return {
+#         "scenario": set_current_scenario(scenario)
+#     }
+   
+# @router.post("/scenario/set")
+# def set_scenario(payload: dict):
+
+#     scenario = payload["scenario"]
+
+#     result = set_current_scenario(scenario)
+
+#     print("SET SCENARIO:", result)
+
+#     return {
+#         "scenario": result
+#     }
+     
+@router.post("/scenario/set")
+def set_scenario(payload: dict):
+
+    scenario = payload["scenario"]
+
+    print("REQUESTED:", scenario)
+
+    result = set_current_scenario(scenario)
+
+    print("RESULT:", result)
+
+    return {"scenario": result}
+    
+@router.get("/scenario/current")
+def get_scenario():
+    print("GET CURRENT:", get_current_scenario())
+    return {
+        "scenario": get_current_scenario()
     }

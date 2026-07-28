@@ -7,30 +7,43 @@ MODEL_NAME = "qwen2.5:3b"
 
 def build_prompt(question: str, context: dict):
 
-    context_json = json.dumps(
-        context,
-        indent=2
-    )
+    root = context.get("root_cause", {})
 
     return f"""
-You are a senior telecom packet core engineer.
+You are a Telecom AI Copilot.
 
-Use ONLY the information in the network context.
+IMPORTANT NETWORK FACTS
 
-Network Context:
-{context_json}
+Network Status:
+{context.get("network_status")}
 
-Question:
+Root Cause:
+{root.get("root_cause")}
+
+Diagnosis:
+{root.get("diagnosis")}
+
+Evidence:
+{root.get("evidence")}
+
+Recommendation:
+{root.get("recommendation")}
+
+User Question:
 {question}
 
-Provide:
-1. Summary
-2. Findings
-3. Recommendations
+
+RULES
+
+- Always answer in English.
+- Use the network facts above.
+- If root cause is identified, do NOT say the network is healthy.
+- Explain the root cause.
+- If the user asks about network health, summarize the current status, root cause, evidence, and recommendation.
+- Keep the answer concise and factual.
 
 Answer:
 """
-
 
 def ask_llm(question: str, context: dict):
 
@@ -40,19 +53,29 @@ def ask_llm(question: str, context: dict):
     )
 
     print(f"Calling Ollama: {OLLAMA_URL}")
+    print("=" * 80)
+    print(f"PROMPT LENGTH: {len(prompt)}")
+    print("=" * 80)
 
-    response = requests.post(
-        OLLAMA_URL,
-        json={
-            "model": MODEL_NAME,
-            "prompt": prompt,
-            "stream": False
-        },
-        timeout=180
-    )
+    try:
+        response = requests.post(
+            OLLAMA_URL,
+            json={
+                "model": MODEL_NAME,
+                "prompt": prompt,
+                "stream": False
+            },
+            timeout=600
+        )
 
-    response.raise_for_status()
+        response.raise_for_status()
 
-    result = response.json()
+        result = response.json()
 
-    return result["response"]
+        return result["response"]
+
+    except requests.exceptions.Timeout:
+        return "AI analysis timed out while waiting for Ollama."
+
+    except Exception as e:
+        return f"AI error: {str(e)}"

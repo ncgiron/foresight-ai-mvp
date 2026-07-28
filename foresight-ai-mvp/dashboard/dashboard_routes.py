@@ -33,6 +33,7 @@ from fastapi.responses import HTMLResponse
 from dashboard.summary import calculate_summary
 
 from mock.kpi_generator import generate_timeseries
+from services.foresight_engine import build_foresight_context
 
 from dashboard.plots import (
     cpu_chart,
@@ -40,6 +41,8 @@ from dashboard.plots import (
     latency_chart,
     throughput_chart
 )
+
+
 
 router = APIRouter()
 
@@ -62,7 +65,17 @@ def dashboard_timeseries():
     HTMLResponse
         Interactive telecom KPI dashboard.
     """
+    from app.routes import build_anomalies
+    from services.forecast_engine import forecast_network
 
+    anomalies = build_anomalies()
+
+    historical = generate_timeseries(72)
+
+    foresight = build_foresight_context(
+        anomalies,
+        historical["timeseries"]
+    )
     # Generate network KPI history
     data = generate_timeseries()
 
@@ -72,100 +85,39 @@ def dashboard_timeseries():
     # Calculate dashboard summary statistics
     summary = calculate_summary(timeseries)
 
+    
+    health_rows = ""
+
+    for node, metrics in foresight["anomalies"].items():
+
+        risk = "LOW"
+
+        for metric in metrics.values():
+
+            if metric.get("risk") == "HIGH":
+                risk = "HIGH"
+                break
+
+        icon = {
+            "LOW": "🟢",
+            "MEDIUM": "🟡",
+            "HIGH": "🔴"
+        }.get(risk, "🟢")
+
+        health_rows += f"""
+        <tr>
+            <td><strong>{node}</strong></td>
+            <td>{icon} {risk}</td>
+        </tr>
+        """
+    
+    
+    
     # Build individual KPI charts
     cpu_fig = cpu_chart(timeseries)
     sessions_fig = sessions_chart(timeseries)
     latency_fig = latency_chart(timeseries)
     throughput_fig = throughput_chart(timeseries)
-
-    # Compose dashboard HTML
-    # html = f"""
-    # <html>
-
-    # <head>
-
-    #     <title>Telecom AI Dashboard</title>
-
-    #     <style>
-
-    #         body {{
-    #             font-family: Arial, sans-serif;
-    #             margin: 20px;
-    #             background-color: #f5f5f5;
-    #         }}
-
-    #         h1 {{
-    #             text-align: center;
-    #         }}
-
-    #         .chart {{
-    #             background: white;
-    #             padding: 20px;
-    #             margin-bottom: 30px;
-    #             border-radius: 10px;
-    #             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    #         }}
-
-    #     </style>
-
-    # </head>
-
-    # <hr>
-
-    #     <h2>Top KPI Summary</h2>
-
-    #     <div>
-
-    #         <p>
-    #             <strong>Peak CPU:</strong>
-    #             {summary["peak_cpu"]:.1f}%
-    #         </p>
-
-    #         <p>
-    #             <strong>Peak Sessions:</strong>
-    #             {summary["peak_sessions"]:,}
-    #         </p>
-
-    #         <p>
-    #             <strong>Peak Throughput:</strong>
-    #             {summary["peak_throughput"]:.0f} Mbps
-    #         </p>
-
-    #         <p>
-    #             <strong>Average Latency:</strong>
-    #             {summary["average_latency"]:.1f} ms
-    #         </p>
-
-    #     </div>
-    # <body>
-
-    #     <h1>Telecom AI Dashboard</h1>
-
-    #     <!-- CPU Utilisation -->
-    #     <div class="chart">
-    #         {cpu_fig.to_html(full_html=False, include_plotlyjs="cdn")}
-    #     </div>
-
-    #     <!-- Active Sessions -->
-    #     <div class="chart">
-    #         {sessions_fig.to_html(full_html=False, include_plotlyjs=False)}
-    #     </div>
-
-    #     <!-- Network Latency -->
-    #     <div class="chart">
-    #         {latency_fig.to_html(full_html=False, include_plotlyjs=False)}
-    #     </div>
-
-    #     <!-- Throughput -->
-    #     <div class="chart">
-    #         {throughput_fig.to_html(full_html=False, include_plotlyjs=False)}
-    #     </div>
-
-    # </body>
-
-    # </html>
-    # """
-
 
     # Build dashboard HTML
     html = f"""
@@ -217,14 +169,101 @@ def dashboard_timeseries():
                 padding: 8px;
                 border-bottom: 1px solid #e5e7eb;
             }}
+            
+            
+            
+            .dashboard-container {{
+                        display: flex;
+                        gap: 20px;
+                    }}
+
+                    .left-panel {{
+                        width: 70%;
+                    }}
+
+                    .right-panel {{
+                        width: 30%;
+                    }}
+
+                    .copilot-panel {{
+                        background: white;
+                        padding: 20px;
+                        border-radius: 10px;
+                        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+                        position: sticky;
+                        top: 20px;
+                    }}
+
+                    textarea {{
+                        width: 100%;
+                        min-height: 120px;
+                        padding: 10px;
+                        border-radius: 8px;
+                        border: 1px solid #ccc;
+                    }}
+
+                    button {{
+                        margin-top: 10px;
+                        padding: 10px 20px;
+                        background: #2563eb;
+                        color: white;
+                        border: none;
+                        border-radius: 8px;
+                        cursor: pointer;
+                    }}
+
+                    button:hover {{
+                        background: #1d4ed8;
+                    }}
+
+                    #ai-response {{
+                        margin-top: 20px;
+                        white-space: pre-wrap;
+                        background: #f3f4f6;
+                        padding: 10px;
+                        border-radius: 8px;
+                    }}
+                    
+            
 
         </style>
 
     </head>
+<script>
 
+async function askAI() {{
+
+    const question =
+        document.getElementById("question").value;
+
+    const response = await fetch(
+        "/copilot/ask",
+        {{
+            method: "POST",
+            headers: {{
+                "Content-Type": "application/json"
+            }},
+            body: JSON.stringify({{
+                question: question
+            }})
+        }}
+    );
+
+    const data = await response.json();
+
+    document.getElementById(
+        "ai-response"
+    ).innerText = data.answer;
+}}
+
+</script>
     <body>
 
         <h1>Telecom AI Dashboard</h1>
+        
+        <div class="dashboard-container">
+
+            <div class="left-panel">
 
         <!-- Future integration with telecom_engine.py -->
         <div class="summary">
@@ -233,25 +272,7 @@ def dashboard_timeseries():
 
             <table>
 
-                <tr>
-                    <td><strong>AMF</strong></td>
-                    <td>🟢 LOW</td>
-                </tr>
-
-                <tr>
-                    <td><strong>SMF</strong></td>
-                    <td>🟡 MEDIUM</td>
-                </tr>
-
-                <tr>
-                    <td><strong>UPF</strong></td>
-                    <td>🔴 HIGH</td>
-                </tr>
-
-                <tr>
-                    <td><strong>PCF</strong></td>
-                    <td>🟢 LOW</td>
-                </tr>
+                {health_rows}
 
             </table>
 
@@ -331,6 +352,34 @@ def dashboard_timeseries():
 
         </div>
 
+            </div>
+
+    <div class="right-panel">
+
+        <div class="copilot-panel">
+
+            <h2>AI Copilot</h2>
+
+            <textarea
+                id="question"
+                placeholder="Ask about network health..."
+            ></textarea>
+
+            <button onclick="askAI()">
+                Ask AI
+            </button>
+
+            <div id="ai-response">
+
+                AI response will appear here.
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
     </body>
 
     </html>
