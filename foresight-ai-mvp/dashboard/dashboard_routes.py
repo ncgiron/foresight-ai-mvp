@@ -50,6 +50,33 @@ from dashboard.plots import (
 router = APIRouter()
 
 
+def build_health_rows(foresight: dict) -> str:
+    """Render the current network health summary rows for the dashboard."""
+    health_rows = ""
+
+    for node, metrics in foresight.get("anomalies", {}).items():
+        risk = "LOW"
+
+        for metric in metrics.values():
+            if metric.get("risk") == "HIGH":
+                risk = "HIGH"
+                break
+
+        icon = {
+            "LOW": "🟢",
+            "MEDIUM": "🟡",
+            "HIGH": "🔴"
+        }.get(risk, "🟢")
+
+        health_rows += f"""
+        <tr>
+            <td><strong>{node}</strong></td>
+            <td>{icon} {risk}</td>
+        </tr>
+        """
+
+    return health_rows
+
 
 @router.get("/dashboard/timeseries", response_class=HTMLResponse)
 def dashboard_timeseries():
@@ -89,33 +116,8 @@ def dashboard_timeseries():
     summary = calculate_summary(timeseries)
 
     
-    health_rows = ""
+    health_rows = build_health_rows(foresight)
 
-    for node, metrics in foresight["anomalies"].items():
-
-        risk = "LOW"
-
-        for metric in metrics.values():
-
-            if metric.get("risk") == "HIGH":
-                risk = "HIGH"
-                break
-
-        icon = {
-            "LOW": "🟢",
-            "MEDIUM": "🟡",
-            "HIGH": "🔴"
-        }.get(risk, "🟢")
-
-        health_rows += f"""
-        <tr>
-            <td><strong>{node}</strong></td>
-            <td>{icon} {risk}</td>
-        </tr>
-        """
-    
-    
-    
     # Build individual KPI charts
     cpu_fig = cpu_chart(timeseries)
     sessions_fig = sessions_chart(timeseries)
@@ -336,6 +338,30 @@ def dashboard_timeseries():
         const data = await res.json();
         const status = document.getElementById('scenario-status');
         status.innerText = data.scenario ? `Active: ${{data.scenario}}` : 'No active scenario';
+        await loadHealthSummary();
+    }}
+
+    async function loadHealthSummary() {{
+        const res = await fetch('/kpi/foresight', {{ cache: 'no-store' }});
+        const data = await res.json();
+        const tableBody = document.getElementById('health-summary-body');
+        if (!tableBody) {{
+            return;
+        }}
+
+        const rows = Object.entries(data.anomalies || {{}}).map(([node, metrics]) => {{
+            let risk = 'LOW';
+            for (const metric of Object.values(metrics)) {{
+                if (metric?.risk === 'HIGH') {{
+                    risk = 'HIGH';
+                    break;
+                }}
+            }}
+            const icon = {{ LOW: '🟢', MEDIUM: '🟡', HIGH: '🔴' }}[risk] || '🟢';
+            return `<tr><td><strong>${{node}}</strong></td><td>${{icon}} ${{risk}}</td></tr>`;
+        }}).join('');
+
+        tableBody.innerHTML = rows || '<tr><td colspan="2">No health data available.</td></tr>';
     }}
 
     function buildTraces(timeseries, metric, yaxisTitle) {{
@@ -399,6 +425,7 @@ def dashboard_timeseries():
         const res = await fetch(url, {{ cache: 'no-store' }});
         const data = await res.json();
         updateCharts(data.timeseries);
+        await loadHealthSummary();
         const status = document.getElementById('refresh-status');
         status.innerText = `Last refreshed: ${{new Date().toLocaleTimeString()}}`;
     }}
@@ -427,6 +454,7 @@ def dashboard_timeseries():
 
     document.addEventListener('DOMContentLoaded', () => {{
         loadScenarios().catch(console.error);
+        loadHealthSummary().catch(console.error);
         refreshCurrentScenario().catch(console.error);
         startRefresh();
     }});
@@ -448,7 +476,9 @@ def dashboard_timeseries():
 
             <table>
 
-                {health_rows}
+                <tbody id="health-summary-body">
+                    {health_rows}
+                </tbody>
 
             </table>
 

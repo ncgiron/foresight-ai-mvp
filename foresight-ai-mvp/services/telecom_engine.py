@@ -67,10 +67,10 @@
 
 
 def analyze_node(node_kpi: dict):
-    cpu = node_kpi["cpu_usage"]
-    latency = node_kpi["latency_ms"]
-    sessions = node_kpi["sessions"]
-    node = node_kpi["node"]
+    cpu = node_kpi.get("cpu_usage", node_kpi.get("cpu", 0))
+    latency = node_kpi.get("latency_ms", 0)
+    sessions = node_kpi.get("sessions", node_kpi.get("active_sessions", 0))
+    node = node_kpi.get("node", "unknown")
 
     score = 0
 
@@ -97,7 +97,9 @@ def analyze_node(node_kpi: dict):
 
     return {
         "node": node,
+        "risk_level": risk,
         "risk": risk,
         "score": score,
+        "health_score": max(100 - score * 10, 0),
         "recommendation": f"Investigate {node} capacity"
     }

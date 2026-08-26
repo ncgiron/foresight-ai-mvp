@@ -1,10 +1,10 @@
-import json
+import os
 import requests
 
-# OLLAMA_URL = "http://192.168.8.163:11434/api/generate" 
-OLLAMA_URL = "http://localhost:11434/api/generate"
+# OLLAMA_URL = "http://192.168.8.163:11434/api/generate"
+OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/generate")
 
-MODEL_NAME = "qwen2.5:3b"
+MODEL_NAME = os.getenv("OLLAMA_MODEL", "qwen2.5:3b")
 
 
 def build_prompt(question: str, context: dict):
@@ -28,7 +28,7 @@ Diagnosis:
 Evidence:
 {root.get("evidence")}
 
-Recommendation:
+Recommendation:  
 {root.get("recommendation")}
 
 User Question:
@@ -73,11 +73,13 @@ def ask_llm(question: str, context: dict):
         response.raise_for_status()
 
         result = response.json()
-
-        return result["response"]
+        return result.get("response", "AI service returned no response.")
 
     except requests.exceptions.Timeout:
         return "AI analysis timed out while waiting for Ollama."
+
+    except requests.exceptions.RequestException:
+        return "AI service is unavailable. Please ensure Ollama is running and reachable."
 
     except Exception as e:
         return f"AI error: {str(e)}"
