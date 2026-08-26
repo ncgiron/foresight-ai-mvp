@@ -88,6 +88,26 @@ def generate_timeseries(hours: int = 72):
     return _build_timeseries(hours)
 
 
+def generate_timeseries_interval(minutes: int = 15, days: int = 7):
+    """
+    Generate KPI history at a fixed interval over a span of days.
+
+    Parameters
+    ----------
+    minutes : int
+        Interval in minutes between data points.
+    days : int
+        Number of days of history to generate.
+
+    Returns
+    -------
+    dict
+        KPI time-series for all network nodes.
+    """
+
+    return _build_timeseries_interval(minutes, days)
+
+
 # ==========================================================
 # Internal Functions
 # ==========================================================
@@ -275,10 +295,9 @@ def _build_snapshot(timestamp):
 
 def _build_timeseries(hours: int):
     """
-    Generate KPI history.
+    Generate KPI history with hourly samples.
 
-    Returns KPI evolution across
-    multiple timestamps.
+    Returns KPI evolution across multiple timestamps.
     """
 
     base_time = datetime.utcnow() - timedelta(
@@ -309,6 +328,38 @@ def _build_timeseries(hours: int):
 
         "generated_at": datetime.utcnow().isoformat(),
 
+        "timeseries": data
+    }
+
+
+def _build_timeseries_interval(minutes: int, days: int):
+    """
+    Generate KPI history at arbitrary minute intervals.
+
+    This builds a timeseries covering the requested days with samples
+    every `minutes` minutes.
+    """
+
+    points = int((days * 24 * 60) / minutes)
+    now = datetime.utcnow()
+    base_time = now - timedelta(minutes=minutes * (points - 1))
+
+    data = {
+        node: []
+        for node in NODES
+    }
+
+    for i in range(points):
+        timestamp = base_time + timedelta(minutes=minutes * i)
+        snapshot = _build_snapshot(timestamp)
+
+        for node in NODES:
+            data[node].append(
+                snapshot["nodes"][node]
+            )
+
+    return {
+        "generated_at": datetime.utcnow().isoformat(),
         "timeseries": data
     }
 

@@ -244,3 +244,72 @@ SCENARIOS = {
         }
     }
 }
+
+
+# Current active scenario (single-selection for now)
+CURRENT_SCENARIO = None
+
+
+def set_current_scenario(scenario_name: str):
+    """Set the active scenario by name.
+
+    Parameters
+    ----------
+    scenario_name : str
+        Name of the scenario to activate, or None to clear.
+
+    Returns
+    -------
+    str | None
+        The active scenario name, or None if no scenario is active.
+    """
+    global CURRENT_SCENARIO
+
+    if scenario_name is None:
+        CURRENT_SCENARIO = None
+        return None
+
+    if scenario_name not in SCENARIOS:
+        return None
+
+    CURRENT_SCENARIO = scenario_name
+
+    # keep a record in ACTIVE_SCENARIOS for compatibility
+    if scenario_name not in ACTIVE_SCENARIOS:
+        ACTIVE_SCENARIOS.append(scenario_name)
+
+    return CURRENT_SCENARIO
+
+
+def get_current_scenario():
+    """Return the currently selected scenario name or None if no scenario is set."""
+    return CURRENT_SCENARIO
+
+
+def get_scenario_data():
+    """Return override KPI values for the active scenario.
+
+    Returns an empty dict when no scenario is active.
+    """
+    if not CURRENT_SCENARIO:
+        return {}
+
+    scenario = SCENARIOS.get(CURRENT_SCENARIO, {})
+    return scenario.get("overrides", {})
+
+
+def apply_scenario_overrides(timeseries):
+    """Apply active scenario overrides to the latest timeseries sample.
+
+    This updates the most recent data point so scenario changes are visible
+    on the next dashboard refresh cycle.
+    """
+    scenario = get_scenario_data()
+    if not scenario:
+        return timeseries
+
+    for node, overrides in scenario.items():
+        if node in timeseries and timeseries[node]:
+            timeseries[node][-1].update(overrides)
+
+    return timeseries

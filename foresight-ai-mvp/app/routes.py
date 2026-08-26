@@ -1,5 +1,4 @@
 import datetime
-
 from fastapi import APIRouter
 # from mock.kpi_generator import generate_timeseries ,generate_all_nodes
 from services.telecom_engine import analyze_node
@@ -12,34 +11,29 @@ from services.correlation_engine import correlate
 from services.forecast_engine import forecast_network
 from services.recommendation_engine import generate_recommendations
 from services.foresight_engine import build_foresight_context
-
 from fastapi import Body
 from services.copilot_engine import (ask_llm)
 from services.foresight_engine import ( build_foresight_context)
-
-from services.scenario_store import (set_current_scenario, get_current_scenario)
-from mock.kpi_generator import (generate_timeseries, generate_snapshot)
-from services.scenario_store import get_scenario_data
+from services.scenario_store import (
+    set_current_scenario,
+    get_current_scenario,
+    get_scenario_data,
+    apply_scenario_overrides
+)
+from mock.kpi_generator import (
+    generate_timeseries,
+    generate_timeseries_interval,
+    generate_snapshot
+)
 
 
 router = APIRouter()
-#debugging temporary print statements
 
-print(
-    "SCENARIO OBJECT ID:",
-    id(get_current_scenario)
-)
 
-print(
-    "CURRENT SCENARIO:",
-    get_current_scenario()
-)
-#=========================
 def build_anomalies():
+    """Build anomaly data from current snapshot and historical KPI trends."""
 
     current = generate_snapshot()
-    # current = apply_scenario(current, "upf_congestion")
-
     historical = generate_timeseries(72)
 
     anomalies = {}
@@ -99,50 +93,31 @@ def build_anomalies():
             current_kpi
         )
         
-        print("ANOMALIES:", anomalies)
-
-    
-# # Apply selected scenario overrides
-#         scenario = get_scenario_data()
-        
-#         print("ACTIVE SCENARIO:", get_current_scenario())
-#         print("SCENARIO DATA:", scenario)
-
-#     for nf, metrics in scenario.items():
-#         if nf not in anomalies:
-#             continue
-#         for metric, value in metrics.items():
-#             if metric in anomalies[nf]:
-#                 anomalies[nf][metric]["value"] = value
-                
+        print("ANOMALIES:", anomalies) 
+               
     return anomalies
 
-
-# @router.get("/kpi/nodes")
-# def get_all_nodes():
-#     return generate_all_nodes()
-
-
-# @router.get("/kpi/nodes/analysis")
-# def analyze_all_nodes():
-
-#     nodes = generate_all_nodes()
-
-#     return {
-#         "results": [analyze_node(n) for n in nodes]
-#     }
 @router.get("/kpi/timeseries")
-def get_timeseries():
-    return generate_timeseries()
+def get_timeseries(minutes: int | None = None, days: int = 7):
+    """Return KPI time-series data, optionally at a specific interval over days."""
+    if minutes is not None:
+        data = generate_timeseries_interval(minutes, days)
+    else:
+        data = generate_timeseries()
+
+    data["timeseries"] = apply_scenario_overrides(data["timeseries"])
+    return data
 
 @router.get("/kpi/nodes")
 def get_nodes():
+    """Return a current KPI snapshot for all network nodes."""
     # return generate_all_nodes()
     return generate_snapshot()
      
 
 @router.get("/kpi/nodes/analysis")
 def analyze_network():
+    """Analyze the current network snapshot and return per-node results."""
 
     data = generate_snapshot()
 
@@ -163,6 +138,7 @@ def analyze_network():
 
 @router.get("/kpi/network/impact")
 def network_impact():
+    """Return network impact analysis for all nodes based on current KPIs."""
     # data = generate_all_nodes()
     data =  generate_snapshot()
 
@@ -178,11 +154,6 @@ def network_impact():
             "analysis": result,
             "depends_on": TOPOLOGY[node]
         }
-
-    # return {
-    #     "timestamp": data["timestamp"],
-    #     "impact_model": impacts
-    # }
     
     return {
     "generated_at": data["generated_at"],
@@ -192,6 +163,7 @@ def network_impact():
 
 @router.get("/kpi/anomalies")
 def get_anomalies():
+    """Return anomaly detection results for the latest KPI snapshot."""
 
     return {
         "generated_at": datetime.datetime.utcnow().isoformat(),
@@ -200,6 +172,7 @@ def get_anomalies():
 
 @router.get("/kpi/correlation")
 def get_correlation():
+    """Return correlated anomaly data using the current anomaly set."""
 
     return correlate(
         build_anomalies()
@@ -208,6 +181,7 @@ def get_correlation():
 
 @router.get("/kpi/root-cause")
 def get_root_cause():
+    """Return root cause analysis based on current correlated anomalies."""
 
     correlation = correlate(
         build_anomalies()
@@ -219,6 +193,7 @@ def get_root_cause():
 
 @router.get("/kpi/forecast")
 def get_forecast():
+    """Return a forecast of future KPI trends based on historical data."""
 
     historical = generate_timeseries(72)
 
@@ -237,6 +212,7 @@ def get_forecast():
 
 @router.get("/kpi/recommendations")
 def get_recommendations():
+    """Return operational recommendations based on root cause analysis."""
 
     anomalies = build_anomalies()
 
@@ -264,6 +240,7 @@ def get_recommendations():
 
 @router.get("/kpi/foresight")
 def get_foresight():
+    """Return a foresight context including anomalies and historical trends."""
 
     anomalies = build_anomalies()
 
@@ -280,7 +257,8 @@ def get_foresight():
 
 
 @router.post("/copilot/ask")
-def ask_copilot( payload: dict = Body(...)):
+def ask_copilot(payload: dict = Body(...)):
+    """Ask the Copilot engine a question based on current anomaly context."""
     
     print("ACTIVE SCENARIO IN COPILOT:", get_current_scenario())
     question = payload["question"]
@@ -314,30 +292,10 @@ def ask_copilot( payload: dict = Body(...)):
             answer
     }
 
-# @router.post("/scenario/set")
-# def set_scenario(payload: dict):
-
-#     scenario = payload["scenario"]
-
-#     return {
-#         "scenario": set_current_scenario(scenario)
-#     }
-   
-# @router.post("/scenario/set")
-# def set_scenario(payload: dict):
-
-#     scenario = payload["scenario"]
-
-#     result = set_current_scenario(scenario)
-
-#     print("SET SCENARIO:", result)
-
-#     return {
-#         "scenario": result
-#     }
      
 @router.post("/scenario/set")
 def set_scenario(payload: dict):
+    """Set the active scenario from the dashboard control payload."""
 
     scenario = payload["scenario"]
 
@@ -351,7 +309,26 @@ def set_scenario(payload: dict):
     
 @router.get("/scenario/current")
 def get_scenario():
+    """Return the currently active scenario name."""
     print("GET CURRENT:", get_current_scenario())
     return {
         "scenario": get_current_scenario()
+    }
+
+
+@router.get("/scenario/list")
+def list_scenarios():
+    """Return available scenario templates and metadata."""
+    from services.scenario_store import SCENARIOS
+
+    return {
+        "scenarios": [
+            {
+                "name": name,
+                "severity": meta.get("severity"),
+                "description": meta.get("description"),
+                "affected_nodes": meta.get("affected_nodes", []),
+            }
+            for name, meta in SCENARIOS.items()
+        ]
     }
