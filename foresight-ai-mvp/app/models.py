@@ -9,6 +9,8 @@ from app.core.database import Base
 from sqlalchemy import Text
 from sqlalchemy import Boolean
 from sqlalchemy import Numeric
+from sqlalchemy.dialects.postgresql import UUID
+import uuid
 
 from app.core.database import Base
 
@@ -16,21 +18,27 @@ from app.core.database import Base
 class Incident(Base):
     __tablename__ = "incidents"
 
-    id = Column(String, primary_key=True)
+    id = Column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4
+    )
 
     timestamp = Column(DateTime)
 
     node = Column(String(255))
+
     nf_type = Column(String(50))
 
     root_cause = Column(Text)
+
     diagnosis = Column(Text)
 
     recommendation = Column(Text)
 
     confidence = Column(Numeric(5, 2))
 
-    confirmed = Column(Boolean)
+    confirmed = Column(Boolean, default=False)
 
     scenario = Column(String(255))
 

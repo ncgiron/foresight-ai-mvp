@@ -5,10 +5,8 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-
 from fastapi import FastAPI ,Depends
 from sqlalchemy.orm import Session
-
 from app.routes import router
 from services.telecom_engine import analyze_node
 from mock.fake_foresight import get_fake_kpi
@@ -16,13 +14,9 @@ from dashboard.dashboard_routes import router as dashboard_router
 from services.history_store import HISTORY 
 from services.anomaly_engine import detect_anomaly
 from services.history_service import  HistoryService
-
 from app.models import KPIHistory
 from app.core.database import Base, get_db
 from app.core.database import engine
-
-
-
 from app.api.history import router as history_router
 from app.api.incidents import router as incidents_router
 
