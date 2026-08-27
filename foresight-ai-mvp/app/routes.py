@@ -1,4 +1,5 @@
 import datetime
+from multiprocessing import context
 from fastapi import APIRouter
 # from mock.kpi_generator import generate_timeseries ,generate_all_nodes
 from services.telecom_engine import analyze_node
@@ -26,6 +27,8 @@ from mock.kpi_generator import (
     generate_snapshot
 )
 
+from repositories.incident_repository import IncidentRepository
+from services.incidents.similarity import find_similar_incidents
 
 router = APIRouter()
 
@@ -274,14 +277,25 @@ def ask_copilot(payload: dict = Body(...)):
     print("FORESIGHT STATUS:", foresight.get("network_status"))
     print("ROOT CAUSE:", foresight.get("root_cause"))
     print("=" * 80)
+
+    repo = IncidentRepository(db)
+
+    incidents = repo.list()
+
+    similar_incidents = find_similar_incidents(incidents,question)
+    context["historical_incidents"] = similar_incidents
     
     answer = ask_llm(
 
         question,
-
         foresight
         # {"status": "ok"}
     )
+    print("Historical Incidents Found:")
+    print(similar_incidents)
+
+    print("HISTORICAL INCIDENTS:")
+    print(historical_incidents)
 
     return {
 

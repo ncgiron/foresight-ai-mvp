@@ -10,6 +10,22 @@ MODEL_NAME = os.getenv("OLLAMA_MODEL", "qwen2.5:3b")
 def build_prompt(question: str, context: dict):
 
     root = context.get("root_cause", {})
+    historical_incidents = context.get( "historical_incidents",[])
+
+    historical_text = ""
+
+    for incident in historical_incidents:
+
+        historical_text += f"""
+            Incident ID:
+            {incident.get("incident_id")}
+
+            Root Cause:
+            {incident.get("root_cause")}
+
+            Diagnosis:
+            {incident.get("diagnosis")}
+ """
 
     return f"""
 You are a Telecom AI Copilot.
@@ -28,6 +44,11 @@ Diagnosis:
 Evidence:
 {root.get("evidence")}
 
+HISTORICAL INCIDENTS
+{historical_text}
+
+
+
 Recommendation:  
 {root.get("recommendation")}
 
@@ -43,6 +64,8 @@ RULES
 - Explain the root cause.
 - If the user asks about network health, summarize the current status, root cause, evidence, and recommendation.
 - Keep the answer concise and factual.
+- If historical incidents exist, use them.
+- Do not claim no incidents exist when incidents are provided.
 
 Answer:
 """
@@ -83,3 +106,4 @@ def ask_llm(question: str, context: dict):
 
     except Exception as e:
         return f"AI error: {str(e)}"
+    
