@@ -1,4 +1,3 @@
-
 import os
 import shutil
 import socket
@@ -27,18 +26,7 @@ from app.core.database import engine
 from app.api.history import router as history_router
 from app.api.incidents import router as incidents_router
 
-app = FastAPI(
-    title="Foresight AI MVP",
-    description="Telecom KPI Analytics Prototype using Fake Foresight Data",
-    version="0.1.0"
-)
 
-ensure_ollama_running()
-
-app.include_router(router)
-app.include_router(dashboard_router)
-app.include_router(history_router)
-app.include_router(incidents_router)
 
 Base.metadata.create_all(bind=engine)
 
@@ -76,7 +64,19 @@ def ensure_ollama_running():
         except OSError:
             time.sleep(0.25)
 
+app = FastAPI(
+    title="Foresight AI MVP",
+    description="Telecom KPI Analytics Prototype using Fake Foresight Data",
+    version="0.1.0"
+)
 
+ensure_ollama_running()
+
+
+app.include_router(router)
+app.include_router(dashboard_router)
+app.include_router(history_router)
+app.include_router(incidents_router)
 app = FastAPI(
     title="Foresight AI MVP",
     description="Telecom KPI Analytics Prototype using Fake Foresight Data",
@@ -146,3 +146,4 @@ def smf_analysis():
         "kpi": kpi,
         "analysis": analysis
     }
+
