@@ -70,13 +70,6 @@ app = FastAPI(
     version="0.1.0"
 )
 
-ensure_ollama_running()
-
-
-app.include_router(router)
-app.include_router(dashboard_router)
-app.include_router(history_router)
-app.include_router(incidents_router)
 app = FastAPI(
     title="Foresight AI MVP",
     description="Telecom KPI Analytics Prototype using Fake Foresight Data",
@@ -88,6 +81,7 @@ ensure_ollama_running()
 app.include_router(router)
 app.include_router(dashboard_router)
 app.include_router(history_router)
+app.include_router(incidents_router)
 
 
 @app.get("/")
