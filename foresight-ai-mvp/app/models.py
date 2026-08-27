@@ -5,10 +5,34 @@ from sqlalchemy import Integer
 from sqlalchemy import Float
 from sqlalchemy import String
 from sqlalchemy import DateTime
+from app.core.database import Base
+from sqlalchemy import Text
+from sqlalchemy import Boolean
+from sqlalchemy import Numeric
 
 from app.core.database import Base
 
 
+class Incident(Base):
+    __tablename__ = "incidents"
+
+    id = Column(String, primary_key=True)
+
+    timestamp = Column(DateTime)
+
+    node = Column(String(255))
+    nf_type = Column(String(50))
+
+    root_cause = Column(Text)
+    diagnosis = Column(Text)
+
+    recommendation = Column(Text)
+
+    confidence = Column(Numeric(5, 2))
+
+    confirmed = Column(Boolean)
+
+    scenario = Column(String(255))
 
 class NodeKPI(BaseModel):
     node: str
@@ -44,3 +68,4 @@ class KPIHistory(Base):
     packet_loss = Column(Float)
 
     availability = Column(Float)    
+
