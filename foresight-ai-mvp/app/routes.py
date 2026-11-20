@@ -291,8 +291,25 @@ def ask_copilot(
 
     incidents = repo.list()
 
-    similar_incidents = find_similar_incidents(incidents,question)
-    # context["historical_incidents"] = similar_incidents
+    # similar_incidents = find_similar_incidents(incidents,question)
+
+    root = foresight.get("root_cause", {})
+
+    search_context = f"""
+    {question}
+    {root.get('root_cause', '')}
+    {root.get('diagnosis', '')}
+    {' '.join(root.get('evidence', []))}
+    """
+
+    similar_incidents = find_similar_incidents(
+        incidents,
+        search_context
+    )
+
+
+
+  
     foresight["historical_incidents"] = similar_incidents
     
     answer = ask_llm(
