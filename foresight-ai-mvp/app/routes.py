@@ -305,9 +305,16 @@ def ask_copilot(
     # print(similar_incidents)
 
     # print("HISTORICAL INCIDENTS:")
-    # print(historical_incidents)
+    # print(similar_incidents)
 
-    print("Historical Incidents Disabled")
+    print("=" * 80)
+    print("QUESTION:", question)
+    print("TOTAL INCIDENTS:", len(incidents))
+    print("SIMILAR INCIDENTS FOUND:", len(similar_incidents))
+    print(similar_incidents)
+    print("=" * 80)
+
+    
 
     return {
 
