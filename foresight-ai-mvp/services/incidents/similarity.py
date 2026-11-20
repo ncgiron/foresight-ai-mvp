@@ -6,6 +6,8 @@ def find_similar_incidents(
 
     results = []
 
+    MIN_SCORE = 3
+
     for incident in incidents:
 
         score = 0
@@ -23,13 +25,13 @@ def find_similar_incidents(
                 query_words.intersection(words)
             )
 
-        if score > 0:
+        if score >= MIN_SCORE:
             results.append(
                 {
                     "incident_id": str(incident.id),
                     "score": score,
                     "root_cause": incident.root_cause,
-                    "diagnosis": incident.diagnosis,
+                    "diagnosis": incident.diagnosis
                 }
             )
 
@@ -37,4 +39,4 @@ def find_similar_incidents(
         results,
         key=lambda x: x["score"],
         reverse=True
-    )
+    )[:3]
