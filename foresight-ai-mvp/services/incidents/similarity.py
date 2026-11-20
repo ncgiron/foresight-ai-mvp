@@ -2,7 +2,7 @@ def find_similar_incidents(
     incidents,
     query
 ):
-    query = query.lower()
+    query_words = set(query.lower().split())
 
     results = []
 
@@ -10,11 +10,18 @@ def find_similar_incidents(
 
         score = 0
 
-        if incident.root_cause and query in incident.root_cause.lower():
-            score += 5
+        for field in [
+            getattr(incident, "nf_type", ""),
+            getattr(incident, "scenario", ""),
+            incident.root_cause or "",
+            incident.diagnosis or "",
+        ]:
 
-        if incident.diagnosis and query in incident.diagnosis.lower():
-            score += 3
+            words = set(field.lower().split())
+
+            score += len(
+                query_words.intersection(words)
+            )
 
         if score > 0:
             results.append(
@@ -22,7 +29,7 @@ def find_similar_incidents(
                     "incident_id": str(incident.id),
                     "score": score,
                     "root_cause": incident.root_cause,
-                    "diagnosis": incident.diagnosis
+                    "diagnosis": incident.diagnosis,
                 }
             )
 
