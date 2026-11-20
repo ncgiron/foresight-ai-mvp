@@ -295,17 +295,19 @@ def ask_copilot(
 
     root = foresight.get("root_cause", {})
 
-    search_context = f"""
-    {question}
-    {root.get('root_cause', '')}
-    {root.get('diagnosis', '')}
-    {' '.join(root.get('evidence', []))}
-    """
+    search_context = " ".join([
+        question,
+        str(root.get("root_cause", "")),
+        str(root.get("diagnosis", "")),
+        " ".join(root.get("evidence", []))
+    ])
 
     similar_incidents = find_similar_incidents(
         incidents,
         search_context
     )
+
+    print("SEARCH CONTEXT:", search_context)
 
 
 
