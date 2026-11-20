@@ -1,6 +1,7 @@
 import datetime
 from multiprocessing import context
 from fastapi import APIRouter
+from fastapi import Depends
 # from mock.kpi_generator import generate_timeseries ,generate_all_nodes
 from services.telecom_engine import analyze_node
 from services.topology import TOPOLOGY
@@ -27,6 +28,8 @@ from mock.kpi_generator import (
     generate_snapshot
 )
 
+from sqlalchemy.orm import Session
+from app.core.database import get_db
 from repositories.incident_repository import IncidentRepository
 from services.incidents.similarity import find_similar_incidents
 
@@ -259,8 +262,14 @@ def get_foresight():
     )
 
 
+
+
+
 @router.post("/copilot/ask")
-def ask_copilot(payload: dict = Body(...)):
+def ask_copilot(
+    payload: dict = Body(...),
+    db: Session = Depends(get_db)):
+    
     """Ask the Copilot engine a question based on current anomaly context."""
     
     print("ACTIVE SCENARIO IN COPILOT:", get_current_scenario())
@@ -283,7 +292,8 @@ def ask_copilot(payload: dict = Body(...)):
     incidents = repo.list()
 
     similar_incidents = find_similar_incidents(incidents,question)
-    context["historical_incidents"] = similar_incidents
+    # context["historical_incidents"] = similar_incidents
+    foresight["historical_incidents"] = similar_incidents
     
     answer = ask_llm(
 
@@ -291,11 +301,13 @@ def ask_copilot(payload: dict = Body(...)):
         foresight
         # {"status": "ok"}
     )
-    print("Historical Incidents Found:")
-    print(similar_incidents)
+    # print("Historical Incidents Found:")
+    # print(similar_incidents)
 
-    print("HISTORICAL INCIDENTS:")
-    print(historical_incidents)
+    # print("HISTORICAL INCIDENTS:")
+    # print(historical_incidents)
+
+    print("Historical Incidents Disabled")
 
     return {
 
